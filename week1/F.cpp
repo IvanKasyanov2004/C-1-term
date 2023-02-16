@@ -11,5 +11,7 @@ int fibonacci(unsigned i) {
     return fibonacci(i - 1) + fibonacci(i - 2);
 }
 int main() {
-    cout << fibonacci(45);
+    int k;
+    cin >> k;
+    cout << fibonacci(k);
 }
