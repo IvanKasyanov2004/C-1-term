@@ -24,12 +24,20 @@ void mergeArrays(int (&a)[N], int (&b)[N], int (&c)[2 * N]){
     while(i < N and j < N){
         if(a[i] <= b[j]){
             c[i + j] = a[i];
-            i = i + 1;
+            i += 1;
         }
-        if(a[i] > b[j]){
+        else{
             c[i + j] = b[j];
-            j = j + 1;
+            j += 1;
         }
+    }
+    while(i < N){
+        c[i + j] = a[i];
+        i += 1;
+    }
+    while(j < N){
+        c[i + j] = b[j];
+        j += 1;
     }
 }
 
