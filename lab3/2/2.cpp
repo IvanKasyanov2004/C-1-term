@@ -27,6 +27,13 @@ struct Atom{
     int stop = 0;
 };
 
+std::mt19937 gen(static_cast<unsigned>(time(nullptr))); // seed the generator
+
+int dice(int min, int max) {
+    std::uniform_int_distribution<> distr(min, max); // define the range
+    return distr(gen);
+}
+
 void generate_crystal(Cell** &cells_arr, Atom* &atoms_arr, int width, int height){
     cells_arr = new Cell*[width];
     for(int i = 0; i < width; i++){
@@ -60,10 +67,9 @@ void add_atoms(Cell** &cells_arr, Atom* &atoms_arr, int width, int height, int a
     int arr[N] = {0};
     int count = 0;
     int index;
-    std::mt19937 gen(static_cast<unsigned>(time(nullptr))); // seed the generator
-    std::uniform_int_distribution<> distr(0, 100000); // define the range
+
     while(count < atoms_number){
-        index = distr(gen) % p;
+        index = dice(0, N) % p;
         if(arr[index] == 0){
             arr[index] = 1;
             count += 1;
@@ -102,7 +108,25 @@ void delete_atoms(Atom* &atoms_arr){
     delete[] atoms_arr;
 }
 
-int move_atoms(Cell** &cells_arr, Atom* &atoms_arr, int atoms_number){
+void show_atoms(Cell** &cells_arr, Atom* &atoms_arr, int width, int height, int atoms_number){
+    for(int y = 0; y < height; y++){
+        for(int x = 0; x < width; x++){
+            if(cells_arr[x][y].atom1 == nullptr){
+                cout << "-" << " ";
+            }
+            else if(cells_arr[x][y].atom1->stop == 1){
+                cout << 2 << " ";
+            }
+            else if(cells_arr[x][y].atom1->stop == 0){
+                cout << 1 << " ";
+            }
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+int move_atoms(Cell** &cells_arr, Atom* &atoms_arr, int atoms_number, int width, int height){
     int atoms_stopped = 0;
     int steps = 0;
     while(atoms_stopped < atoms_number){
@@ -166,9 +190,10 @@ int move_atoms(Cell** &cells_arr, Atom* &atoms_arr, int atoms_number){
         }      
 
 
+
         for(int i = 0; i < atoms_number; i++){
             if(atoms_arr[i].stop == 0){
-                int way = rand() % 4;
+                int way = dice(0, N) % 4;
                 atoms_arr[i].cell_prev = atoms_arr[i].cell;
                 if(way == 0){
                     atoms_arr[i].cell = atoms_arr[i].cell->right;
@@ -203,14 +228,17 @@ int move_atoms(Cell** &cells_arr, Atom* &atoms_arr, int atoms_number){
         for(int i = 0; i < atoms_number; i++){
             if(atoms_arr[i].cell->atom2 != nullptr){
                 atoms_arr[i].cell->atom2->cell = atoms_arr[i].cell->atom2->cell_prev;
+                atoms_arr[i].cell->atom2->cell->atom1 = &atoms_arr[i];
                 atoms_arr[i].cell->atom2 = nullptr;
             }
             if(atoms_arr[i].cell->atom3 != nullptr){
                 atoms_arr[i].cell->atom3->cell = atoms_arr[i].cell->atom3->cell_prev;
+                atoms_arr[i].cell->atom3->cell->atom1 = &atoms_arr[i];
                 atoms_arr[i].cell->atom3 = nullptr;
             }
             if(atoms_arr[i].cell->atom4 != nullptr){
                 atoms_arr[i].cell->atom4->cell = atoms_arr[i].cell->atom4->cell_prev;
+                atoms_arr[i].cell->atom4->cell->atom1 = &atoms_arr[i];
                 atoms_arr[i].cell->atom4 = nullptr;
             }
         }   
@@ -220,9 +248,9 @@ int move_atoms(Cell** &cells_arr, Atom* &atoms_arr, int atoms_number){
 }
 
 void calculate_steps(Cell** &cells_arr, Atom* &atoms_arr, int sizes_number, int size_step, int rep_number, int atoms_number){
-    remove("2_11.txt");
+    remove("2_2.txt");
     std::ofstream out;
-    out.open("2_11.txt", std::ios::app);
+    out.open("2_2.txt", std::ios::app);
     for(int i = 1; i < sizes_number + 1; i++){
         int size = i * size_step;
         out << size << " ";
@@ -232,7 +260,7 @@ void calculate_steps(Cell** &cells_arr, Atom* &atoms_arr, int sizes_number, int 
         int sum_steps = 0;
         for(int j = 0; j < rep_number; j++){
             add_atoms(cells_arr, atoms_arr, size, size, atoms_number);
-            sum_steps += move_atoms(cells_arr, atoms_arr, atoms_number);
+            sum_steps += move_atoms(cells_arr, atoms_arr, atoms_number, size, size);
             remove_atoms(cells_arr, atoms_arr, size, size, atoms_number);
         }
 
@@ -243,8 +271,36 @@ void calculate_steps(Cell** &cells_arr, Atom* &atoms_arr, int sizes_number, int 
     out.close(); 
 }
 
+void calculate_all_steps(Cell** &cells_arr, Atom* &atoms_arr, int sizes_number, int size_step, int rep_number){
+    remove("2_all.txt");
+    std::ofstream out;
+    out.open("2_all.txt", std::ios::app);
+    int atoms_numbers[35] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 15, 17, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 200, 300, 400, 500, 600, 800, 1000};
+    for(int k = 0; k < 35; k++){
+        int atoms_number = atoms_numbers[k];
+        for(int i = 1; i < sizes_number + 1; i++){
+            int size = i * size_step;
+            out << size << " ";
+            generate_crystal(cells_arr, atoms_arr, size, size);
+            generate_atoms(atoms_arr, atoms_number);
+
+            int sum_steps = 0;
+            for(int j = 0; j < rep_number; j++){
+                add_atoms(cells_arr, atoms_arr, size, size, atoms_number);
+                sum_steps += move_atoms(cells_arr, atoms_arr, atoms_number, size, size);
+                remove_atoms(cells_arr, atoms_arr, size, size, atoms_number);
+            }
+
+            out << sum_steps / rep_number << endl;
+            delete_atoms(atoms_arr);
+            delete_crystal(cells_arr, atoms_arr, size, size);
+            }
+    }
+    out.close(); 
+}
+
 int main(){
     Cell** cells_arr;
     Atom* atoms_arr;
-    calculate_steps(cells_arr, atoms_arr, 20, 25, 200, 400);
+    calculate_all_steps(cells_arr, atoms_arr, 20, 50, 200);
 }
